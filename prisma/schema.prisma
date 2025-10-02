@@ -1,0 +1,3498 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model User {
+  id                String                  @id @default(cuid())
+  name              String?
+  email             String                  @unique
+  emailVerified     DateTime?
+  image             String?
+  password          String?
+  createdAt         DateTime                @default(now())
+  updatedAt         DateTime                @updatedAt
+  platformRoleId    String?
+  platformRole      PlatformRole?           @relation(fields: [platformRoleId], references: [id])
+  accounts          Account[]
+  comments          ArticleComment[]
+  articleVersions   ArticleContentVersion[]
+  authoredArticles  KnowledgeArticle[]      @relation("ArticleAuthor")
+  reviewedArticles  KnowledgeArticle[]      @relation("ArticleReviewer")
+  organizationUsers OrganizationUser[]
+  sessions          Session[]
+  bookmarks         UserBookmark[]
+
+  // Asset Management relationships
+  ownedAssets   Asset[]  @relation("AssetOwner")
+  createdAssets Asset[]  @relation("AssetCreator")
+  updatedAssets Asset[]  @relation("AssetUpdater")
+  ownedSystems  System[] @relation("SystemOwner")
+
+  // Evidence Locker & Control Frameworks relationships
+  createdControls      Control[]             @relation("ControlCreator")
+  updatedControls      Control[]             @relation("ControlUpdater")
+  ownedControls        Control[]             @relation("ControlOwner")
+  uploadedEvidence     Evidence[]            @relation("EvidenceUploader")
+  evidenceVersions     EvidenceVersion[]     @relation("EvidenceVersionUploader")
+  controlEvidenceLinks ControlEvidenceLink[] @relation("ControlEvidenceLinker")
+  createdTasks         Task[]                @relation("TaskCreator")
+  completedTasks       Task[]                @relation("TaskCompleter")
+  assignedTasks        Task[]                @relation("TaskAssignee")
+  evidenceApprovals    EvidenceApproval[]    @relation("EvidenceApprover")
+  automatedEvidence    AutomatedEvidence[]   @relation("AutomatedEvidenceCreator")
+
+  // Access Management relationships
+  accessReviews AccessReview[]
+
+  // Audit Automation relationships
+  createdAuditRuns      AuditRun[]          @relation("AuditRunCreator")
+  auditControlReviews   AuditControl[]      @relation("AuditControlReviewer")
+  auditControlApprovals AuditControl[]      @relation("AuditControlApprover")
+  auditEvidenceLinks    AuditEvidenceLink[] @relation("AuditEvidenceLinker")
+  auditFindingOwners    AuditFinding[]      @relation("AuditFindingOwner")
+  auditPackRequests     AuditPackExport[]   @relation("AuditPackRequester")
+  auditActivities       AuditRunActivity[]  @relation("AuditActivityPerformer")
+  guestAuditorInvites   GuestAuditor[]      @relation("GuestAuditorInviter")
+  receivedNotifications Notification[]      @relation("NotificationRecipient")
+  createdNotifications  Notification[]      @relation("NotificationCreator")
+  dashboardWidgets      DashboardWidget[]   @relation("DashboardWidgetUser")
+  dashboardAlerts       DashboardAlert[]    @relation("DashboardAlertUser")
+
+  // Integration relations
+  integrationConnections IntegrationConnection[]
+
+  // Questionnaire relationships
+  uploadedQuestionnaires  Questionnaire[]         @relation("QuestionnaireUploader")
+  assignedQuestionnaires  Questionnaire[]         @relation("QuestionnaireAssignee")
+  reviewedAnswers         Answer[]                @relation("AnswerReviewer")
+  approvedAnswers         Answer[]                @relation("AnswerApprover")
+  createdAnswerLibrary    AnswerLibrary[]         @relation("AnswerLibraryCreator")
+  questionnaireExports    QuestionnaireExport[]   @relation("QuestionnaireExporter")
+  questionnaireActivities QuestionnaireActivity[] @relation("QuestionnaireActivityUser")
+  assetActivities          AssetActivity[]        @relation("AssetActivityUser")
+  assetAssignmentsAssignedTo AssetAssignment[]     @relation("AssetAssignmentAssignedTo")
+  assetAssignmentsAssignedBy AssetAssignment[]     @relation("AssetAssignmentAssignedBy")
+
+  // Policy & Risk Management relationships
+  ownedPolicies                  Policy[]               @relation("PolicyOwner")
+  reviewedPolicies               Policy[]               @relation("PolicyReviewer")
+  approvedPolicies               Policy[]               @relation("PolicyApprover")
+  policyVersionsCreated          PolicyVersion[]        @relation("PolicyVersionCreator")
+  policyVersionsApproved         PolicyVersion[]        @relation("PolicyVersionApprover")
+  policyAcknowledgments          PolicyAcknowledgment[] @relation("PolicyAcknowledgmentUser")
+  policyAssignments              PolicyAssignment[]     @relation("PolicyAssignmentAssigner")
+  ownedRisks                     Risk[]                 @relation("RiskOwner")
+  riskAssessments                RiskAssessment[]       @relation("RiskAssessmentAssessor")
+  riskAssessmentApprovals        RiskAssessment[]       @relation("RiskAssessmentApprover")
+  riskTreatments                 RiskTreatment[]        @relation("RiskTreatmentOwner")
+  riskControlMappings            RiskControlMapping[]   @relation("RiskControlMappingCreator")
+  riskPolicyMappings             RiskPolicyMapping[]    @relation("RiskPolicyMappingCreator")
+  governanceDashboards           GovernanceDashboard[]  @relation("GovernanceDashboardCreator")
+  governanceAlertAcknowledgments GovernanceAlert[]      @relation("GovernanceAlertAcknowledgement")
+  governanceAlertResolutions     GovernanceAlert[]      @relation("GovernanceAlertResolution")
+
+  // AI Assistance Layer relationships
+  aiQueries  AIQuery[]    @relation("AIQueryUser")
+  aiFeedback AIFeedback[] @relation("AIFeedbackUser")
+  aiSessions AISession[]  @relation("AISessionUser")
+
+  // Enterprise Identity & Access Management relationships
+  samlSessions     SAMLSession[]
+  securityPolicies SecurityPolicy[]
+  securityAuditLog SecurityAuditLog[]
+
+  @@map("users")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+model Organization {
+  id                   String                            @id @default(cuid())
+  name                 String
+  slug                 String                            @unique
+  domain               String?                           @unique
+  status               String                            @default("active")
+  plan                 String                            @default("free")
+  description          String?
+  logo                 String?
+  website              String?
+  createdAt            DateTime                          @default(now())
+  updatedAt            DateTime                          @updatedAt
+  settings             Json                              @default("{}")
+  auditAssignments     AuditAssignment[]
+  assessments          ComplianceAssessment[]
+  departments          Department[]
+  evidenceSubmissions  EvidenceSubmission[]
+  complianceSelections OrganizationComplianceSelection[]
+  permissions          OrganizationPermission[]
+  roles                OrganizationRole[]
+  users                OrganizationUser[]
+
+  // Asset Management relationships
+  assets            Asset[]
+  assetCustomFields AssetCustomField[]
+  assetTags         AssetTag[]
+  vendors           Vendor[]
+  contracts         Contract[]
+  softwareCatalog   SoftwareCatalog[]
+  licenses          License[]
+  systems           System[]
+  accessRegistry    UserAccessRegistry[]
+  importJobs        ImportJob[]
+
+  // Evidence Locker & Control Frameworks relationships
+  frameworks   Framework[]
+  controls     Control[]
+  evidence     Evidence[]
+  evidenceTags EvidenceTag[]
+  tasks        Task[]
+
+  // Audit Automation relationships
+  auditRuns     AuditRun[]
+  notifications Notification[]
+
+  // Security Posture Dashboard relationships
+  metricSnapshots    MetricSnapshot[]
+  dashboardWidgets   DashboardWidget[]
+  frameworkMetrics   FrameworkMetric[]
+  evidenceMetrics    EvidenceMetric[]
+  taskMetrics        TaskMetric[]
+  dashboardEvents    DashboardEvent[]
+  dashboardAlerts    DashboardAlert[]
+  dashboardTemplates DashboardTemplate[]
+
+  // Integration relations
+  integrationConnections IntegrationConnection[]
+  integrationLogs        IntegrationLog[]
+  automatedEvidence      AutomatedEvidence[]
+  integrationWebhooks    IntegrationWebhook[]
+  integrationTemplates   IntegrationTemplate[]
+
+  // Questionnaire relationships
+  questionnaires Questionnaire[]
+  answerLibrary  AnswerLibrary[]
+
+  // Policy & Risk Management relationships
+  policies             Policy[]
+  risks                Risk[]
+  governanceDashboards GovernanceDashboard[]
+  governanceMetrics    GovernanceMetric[]
+  governanceAlerts     GovernanceAlert[]
+
+  // AI Assistance Layer relationships
+  aiQueries    AIQuery[]
+  aiEmbeddings AIEmbedding[]
+  aiSessions   AISession[]
+
+  // Enterprise Identity & Access Management relationships
+  identityProviders IdentityProvider[]
+  samlSessions      SAMLSession[]
+  scimEndpoints     SCIMEndpoint[]
+  provisioningAudit ProvisioningAudit[]
+  dataResidency     OrgDataResidency?
+  dataTransferAudit DataTransferAudit[]
+  encryptionConfig  EncryptionConfig?
+  securityPolicies  SecurityPolicy[]
+  securityAuditLog  SecurityAuditLog[]
+
+  @@map("organizations")
+}
+
+model OrganizationUser {
+  id             String       @id @default(cuid())
+  userId         String
+  organizationId String
+  role           String
+  department     String?
+  isActive       Boolean      @default(true)
+  joinedAt       DateTime     @default(now())
+  lastActiveAt   DateTime     @updatedAt
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, organizationId])
+  @@map("organization_users")
+}
+
+model Department {
+  id             String       @id @default(cuid())
+  name           String
+  description    String?
+  organizationId String
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([name, organizationId])
+  @@map("departments")
+}
+
+model PlatformRole {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  permissions String[]
+  isSystem    Boolean  @default(false) // System roles cannot be deleted
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  users       User[]
+
+  @@map("platform_roles")
+}
+
+model OrganizationRole {
+  id             String       @id @default(cuid())
+  name           String
+  description    String?
+  organizationId String
+  permissions    String[]
+  isActive       Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([name, organizationId])
+  @@map("organization_roles")
+}
+
+model OrganizationPermission {
+  id             String       @id @default(cuid())
+  name           String
+  description    String?
+  module         String
+  action         String
+  organizationId String
+  createdAt      DateTime     @default(now())
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([name, organizationId])
+  @@map("organization_permissions")
+}
+
+model ComplianceFramework {
+  id                     String                            @id @default(cuid())
+  name                   String
+  version                String
+  description            String?
+  effectiveDate          DateTime?
+  industryTags           String[]
+  certificationBody      String?
+  documentationUrl       String?
+  isActive               Boolean                           @default(true)
+  createdAt              DateTime                          @default(now())
+  updatedAt              DateTime                          @updatedAt
+  topics                 ComplianceTopic[]
+  knowledgeArticles      KnowledgeArticle[]
+  knowledgeCategories    KnowledgeCategory[]
+  knowledgeTerms         KnowledgeTerm[]
+  organizationSelections OrganizationComplianceSelection[]
+
+  @@unique([name, version], name: "name_version")
+  @@map("compliance_frameworks")
+}
+
+model ComplianceTopic {
+  id                  String                @id @default(cuid())
+  frameworkId         String
+  name                String
+  description         String?
+  orderIndex          Int                   @default(0)
+  isActive            Boolean               @default(true)
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+  components          ComplianceComponent[]
+  framework           ComplianceFramework   @relation(fields: [frameworkId], references: [id], onDelete: Cascade)
+  knowledgeCategories KnowledgeCategory[]
+
+  @@map("compliance_topics")
+}
+
+model ComplianceComponent {
+  id                  String              @id @default(cuid())
+  topicId             String
+  name                String
+  description         String?
+  orderIndex          Int                 @default(0)
+  isActive            Boolean             @default(true)
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+  clauses             ComplianceClause[]
+  topic               ComplianceTopic     @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  knowledgeCategories KnowledgeCategory[]
+
+  @@map("compliance_components")
+}
+
+model ComplianceClause {
+  id                     String                            @id @default(cuid())
+  componentId            String
+  clauseId               String
+  title                  String
+  description            String
+  implementationGuidance String?
+  evidenceRequirements   String?
+  riskLevel              RiskLevel                         @default(MEDIUM)
+  testingProcedures      String?
+  isActive               Boolean                           @default(true)
+  createdAt              DateTime                          @default(now())
+  updatedAt              DateTime                          @updatedAt
+  auditAssignments       AuditAssignment[]
+  assessments            ComplianceAssessment[]
+  component              ComplianceComponent               @relation(fields: [componentId], references: [id], onDelete: Cascade)
+  evidenceSubmissions    EvidenceSubmission[]
+  knowledgeArticles      KnowledgeArticle[]
+  knowledgeCategories    KnowledgeCategory[]
+  knowledgeTerms         KnowledgeTerm[]
+  organizationSelections OrganizationComplianceSelection[]
+
+  @@unique([componentId, clauseId])
+  @@map("compliance_clauses")
+}
+
+model OrganizationComplianceSelection {
+  id               String              @id @default(cuid())
+  organizationId   String
+  frameworkId      String
+  clauseId         String?
+  isEnabled        Boolean             @default(true)
+  internalDeadline DateTime?
+  riskTolerance    RiskTolerance       @default(MEDIUM)
+  internalOwner    String?
+  notes            String?
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+  clause           ComplianceClause?   @relation(fields: [clauseId], references: [id], onDelete: Cascade)
+  framework        ComplianceFramework @relation(fields: [frameworkId], references: [id], onDelete: Cascade)
+  organization     Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, frameworkId, clauseId])
+  @@map("organization_compliance_selections")
+}
+
+model EvidenceSubmission {
+  id             String           @id @default(cuid())
+  organizationId String
+  clauseId       String
+  fileName       String
+  filePath       String
+  fileSize       Int
+  mimeType       String
+  description    String?
+  tags           String[]
+  version        Int              @default(1)
+  isLatest       Boolean          @default(true)
+  submittedBy    String
+  submittedAt    DateTime         @default(now())
+  reviewedBy     String?
+  reviewedAt     DateTime?
+  reviewStatus   ReviewStatus     @default(PENDING)
+  reviewNotes    String?
+  clause         ComplianceClause @relation(fields: [clauseId], references: [id], onDelete: Cascade)
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@map("evidence_submissions")
+}
+
+model AuditAssignment {
+  id              String           @id @default(cuid())
+  organizationId  String
+  clauseId        String
+  auditorId       String
+  auditType       AuditType
+  assignedAt      DateTime         @default(now())
+  dueDate         DateTime?
+  completedAt     DateTime?
+  status          AuditStatus      @default(ASSIGNED)
+  findings        String?
+  recommendations String?
+  riskRating      RiskLevel?
+  clause          ComplianceClause @relation(fields: [clauseId], references: [id], onDelete: Cascade)
+  organization    Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@map("audit_assignments")
+}
+
+model ComplianceAssessment {
+  id              String           @id @default(cuid())
+  organizationId  String
+  clauseId        String
+  assessmentType  AssessmentType
+  assessorId      String
+  score           Int?
+  status          AssessmentStatus @default(IN_PROGRESS)
+  findings        String?
+  recommendations String?
+  nextReviewDate  DateTime?
+  assessedAt      DateTime         @default(now())
+  completedAt     DateTime?
+  clause          ComplianceClause @relation(fields: [clauseId], references: [id], onDelete: Cascade)
+  organization    Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@map("compliance_assessments")
+}
+
+model KnowledgeCategory {
+  id          String               @id @default(cuid())
+  name        String
+  description String?
+  parentId    String?
+  frameworkId String?
+  topicId     String?
+  componentId String?
+  clauseId    String?
+  orderIndex  Int                  @default(0)
+  isActive    Boolean              @default(true)
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+  articles    KnowledgeArticle[]
+  clause      ComplianceClause?    @relation(fields: [clauseId], references: [id])
+  component   ComplianceComponent? @relation(fields: [componentId], references: [id])
+  framework   ComplianceFramework? @relation(fields: [frameworkId], references: [id])
+  parent      KnowledgeCategory?   @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children    KnowledgeCategory[]  @relation("CategoryHierarchy")
+  topic       ComplianceTopic?     @relation(fields: [topicId], references: [id])
+  terms       KnowledgeTerm[]
+
+  @@map("knowledge_categories")
+}
+
+model KnowledgeArticle {
+  id                      String                  @id @default(cuid())
+  title                   String
+  slug                    String                  @unique
+  summary                 String?
+  content                 String
+  contentType             ContentType             @default(ARTICLE)
+  categoryId              String?
+  frameworkId             String?
+  clauseId                String?
+  status                  ContentStatus           @default(DRAFT)
+  version                 Int                     @default(1)
+  isLatest                Boolean                 @default(true)
+  publishedAt             DateTime?
+  authorId                String
+  reviewerId              String?
+  reviewedAt              DateTime?
+  tags                    String[]
+  mediaUrls               String[]
+  viewCount               Int                     @default(0)
+  rating                  Float?
+  ratingCount             Int                     @default(0)
+  createdAt               DateTime                @default(now())
+  updatedAt               DateTime                @updatedAt
+  comments                ArticleComment[]
+  versions                ArticleContentVersion[]
+  crossReferencesAsSource CrossReference[]        @relation("CrossReferenceSource")
+  crossReferencesAsTarget CrossReference[]        @relation("CrossReferenceTarget")
+  author                  User                    @relation("ArticleAuthor", fields: [authorId], references: [id])
+  category                KnowledgeCategory?      @relation(fields: [categoryId], references: [id])
+  clause                  ComplianceClause?       @relation(fields: [clauseId], references: [id])
+  framework               ComplianceFramework?    @relation(fields: [frameworkId], references: [id])
+  reviewer                User?                   @relation("ArticleReviewer", fields: [reviewerId], references: [id])
+  bookmarks               UserBookmark[]
+
+  @@map("knowledge_articles")
+}
+
+model ArticleContentVersion {
+  id        String           @id @default(cuid())
+  articleId String
+  version   Int
+  title     String
+  content   String
+  summary   String?
+  changeLog String?
+  authorId  String
+  createdAt DateTime         @default(now())
+  article   KnowledgeArticle @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  author    User             @relation(fields: [authorId], references: [id])
+
+  @@unique([articleId, version])
+  @@map("article_content_versions")
+}
+
+model KnowledgeTerm {
+  id              String               @id @default(cuid())
+  term            String
+  definition      String
+  shortDefinition String?
+  categoryId      String?
+  frameworkId     String?
+  clauseId        String?
+  synonyms        String[]
+  acronyms        String[]
+  examples        String[]
+  relatedTerms    String[]
+  isActive        Boolean              @default(true)
+  viewCount       Int                  @default(0)
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+  category        KnowledgeCategory?   @relation(fields: [categoryId], references: [id])
+  clause          ComplianceClause?    @relation(fields: [clauseId], references: [id])
+  framework       ComplianceFramework? @relation(fields: [frameworkId], references: [id])
+
+  @@unique([term, frameworkId])
+  @@map("knowledge_terms")
+}
+
+model CrossReference {
+  id               String           @id @default(cuid())
+  sourceType       ReferenceType
+  sourceId         String
+  targetType       ReferenceType
+  targetId         String
+  relationshipType RelationshipType
+  description      String?
+  createdAt        DateTime         @default(now())
+  sourceArticle    KnowledgeArticle @relation("CrossReferenceSource", fields: [sourceId], references: [id])
+  targetArticle    KnowledgeArticle @relation("CrossReferenceTarget", fields: [targetId], references: [id])
+
+  @@unique([sourceType, sourceId, targetType, targetId])
+  @@map("cross_references")
+}
+
+model UserBookmark {
+  id        String           @id @default(cuid())
+  userId    String
+  articleId String
+  notes     String?
+  tags      String[]
+  createdAt DateTime         @default(now())
+  article   KnowledgeArticle @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, articleId])
+  @@map("user_bookmarks")
+}
+
+model ArticleComment {
+  id         String           @id @default(cuid())
+  articleId  String
+  userId     String
+  content    String
+  parentId   String?
+  isApproved Boolean          @default(false)
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+  article    KnowledgeArticle @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  parent     ArticleComment?  @relation("CommentReplies", fields: [parentId], references: [id])
+  replies    ArticleComment[] @relation("CommentReplies")
+  user       User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("article_comments")
+}
+
+model ContentAnalytics {
+  id          String          @id @default(cuid())
+  contentType ContentType
+  contentId   String
+  userId      String?
+  action      AnalyticsAction
+  metadata    Json?
+  createdAt   DateTime        @default(now())
+
+  @@map("content_analytics")
+}
+
+model SearchIndex {
+  id             String      @id @default(cuid())
+  contentType    ContentType
+  contentId      String
+  searchableText String
+  keywords       String[]
+  tags           String[]
+  frameworkId    String?
+  lastIndexed    DateTime    @default(now())
+
+  @@unique([contentType, contentId])
+  @@map("search_indexes")
+}
+
+// ===== IT ASSET & ACCESS MANAGEMENT MODULE =====
+
+model Asset {
+  id             String      @id @default(cuid())
+  organizationId String
+  type           AssetType
+  name           String
+  hostname       String?
+  serial         String?
+  assetTag       String?
+  ownerUserId    String?
+  department     String?
+  location       String?
+  status         AssetStatus @default(IN_USE)
+  purchaseDate   DateTime?
+  warrantyEnd    DateTime?
+  vendorId       String?
+  notes          String?
+  customFields   Json?       @default("{}")
+  createdBy      String
+  updatedBy      String
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  // Relationships
+  organization Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  owner        User?              @relation("AssetOwner", fields: [ownerUserId], references: [id])
+  creator      User               @relation("AssetCreator", fields: [createdBy], references: [id])
+  updater      User               @relation("AssetUpdater", fields: [updatedBy], references: [id])
+  vendor       Vendor?            @relation(fields: [vendorId], references: [id])
+  customValues AssetCustomValue[]
+  tagLinks     AssetTagLink[]
+  attachments  AssetAttachment[]
+  activities   AssetActivity[]
+  assignments  AssetAssignment[]
+  transfers    AssetTransfer[]
+  repairs      AssetRepair[]
+  disposals    AssetDisposal[]
+
+  @@unique([organizationId, assetTag])
+  @@unique([organizationId, serial])
+  @@index([organizationId, type])
+  @@index([organizationId, status])
+  @@index([organizationId, ownerUserId])
+  @@index([organizationId, vendorId])
+  @@map("assets")
+}
+
+model AssetCustomField {
+  id             String          @id @default(cuid())
+  organizationId String
+  key            String
+  label          String
+  type           CustomFieldType
+  options        String[]        @default([])
+  isRequired     Boolean         @default(false)
+  order          Int             @default(0)
+  isActive       Boolean         @default(true)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  organization Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  values       AssetCustomValue[]
+
+  @@unique([organizationId, key])
+  @@map("asset_custom_fields")
+}
+
+model AssetCustomValue {
+  id        String   @id @default(cuid())
+  assetId   String
+  fieldId   String
+  value     String
+  createdAt DateTime @default(now())
+
+  asset Asset            @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  field AssetCustomField @relation(fields: [fieldId], references: [id], onDelete: Cascade)
+
+  @@unique([assetId, fieldId])
+  @@map("asset_custom_values")
+}
+
+model AssetTag {
+  id             String   @id @default(cuid())
+  organizationId String
+  name           String
+  color          String   @default("#3B82F6")
+  description    String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  tagLinks     AssetTagLink[]
+
+  @@unique([organizationId, name])
+  @@map("asset_tags")
+}
+
+model AssetTagLink {
+  id        String   @id @default(cuid())
+  assetId   String
+  tagId     String
+  createdAt DateTime @default(now())
+
+  asset Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  tag   AssetTag @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@unique([assetId, tagId])
+  @@map("asset_tag_links")
+}
+
+model AssetAttachment {
+  id         String   @id @default(cuid())
+  assetId    String
+  fileName   String
+  filePath   String
+  fileSize   Int
+  mimeType   String
+  uploadedBy String
+  uploadedAt DateTime @default(now())
+
+  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@map("asset_attachments")
+}
+
+model AssetActivity {
+  id        String      @id @default(cuid())
+  assetId   String
+  action    AssetAction
+  details   String?
+  userId    String
+  metadata  Json?       @default("{}")
+  createdAt DateTime    @default(now())
+
+  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  user  User  @relation("AssetActivityUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([assetId, createdAt])
+  @@map("asset_activities")
+}
+
+model AssetAssignment {
+  id             String    @id @default(cuid())
+  assetId        String
+  assignedTo     String
+  assignedBy     String
+  assignedAt     DateTime  @default(now())
+  acknowledgedAt DateTime?
+  notes          String?
+
+  asset      Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  assignedToUser User @relation("AssetAssignmentAssignedTo", fields: [assignedTo], references: [id], onDelete: Cascade)
+  assignedByUser User @relation("AssetAssignmentAssignedBy", fields: [assignedBy], references: [id], onDelete: Cascade)
+
+  @@map("asset_assignments")
+}
+
+model AssetTransfer {
+  id             String    @id @default(cuid())
+  assetId        String
+  fromUserId     String?
+  toUserId       String
+  transferredBy  String
+  transferredAt  DateTime  @default(now())
+  acknowledgedAt DateTime?
+  notes          String?
+
+  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@map("asset_transfers")
+}
+
+model AssetRepair {
+  id          String       @id @default(cuid())
+  assetId     String
+  vendorId    String?
+  description String
+  cost        Float?
+  status      RepairStatus @default(IN_PROGRESS)
+  startedAt   DateTime     @default(now())
+  completedAt DateTime?
+  notes       String?
+
+  asset  Asset   @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  vendor Vendor? @relation(fields: [vendorId], references: [id])
+
+  @@map("asset_repairs")
+}
+
+model AssetDisposal {
+  id              String         @id @default(cuid())
+  assetId         String
+  disposalMethod  DisposalMethod
+  disposalDate    DateTime       @default(now())
+  certificatePath String?
+  disposedBy      String
+  notes           String?
+
+  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@map("asset_disposals")
+}
+
+model Vendor {
+  id             String    @id @default(cuid())
+  organizationId String
+  name           String
+  contact        String?
+  email          String?
+  phone          String?
+  address        String?
+  website        String?
+  riskRating     RiskLevel @default(MEDIUM)
+  notes          String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  organization    Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  assets          Asset[]
+  contracts       Contract[]
+  repairs         AssetRepair[]
+  renewalLicenses License[]     @relation("VendorRenewals")
+
+  @@unique([organizationId, name])
+  @@map("vendors")
+}
+
+model Contract {
+  id             String         @id @default(cuid())
+  organizationId String
+  vendorId       String
+  title          String
+  description    String?
+  startDate      DateTime
+  endDate        DateTime?
+  renewalTerms   String?
+  amount         Float?
+  currency       String         @default("USD")
+  filePath       String?
+  status         ContractStatus @default(ACTIVE)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  vendor       Vendor       @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+
+  @@map("contracts")
+}
+
+model SoftwareCatalog {
+  id             String         @id @default(cuid())
+  organizationId String
+  name           String
+  version        String?
+  publisher      String?
+  category       String?
+  approvalStatus ApprovalStatus @default(PENDING)
+  description    String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  licenses     License[]
+
+  @@unique([organizationId, name, version])
+  @@map("software_catalog")
+}
+
+model License {
+  id              String    @id @default(cuid())
+  organizationId  String
+  softwareId      String
+  licenseKey      String?
+  seatsTotal      Int
+  seatsUsed       Int       @default(0)
+  purchaseDate    DateTime?
+  expiryDate      DateTime?
+  renewalVendorId String?
+  filePath        String?
+  notes           String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  organization  Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  software      SoftwareCatalog     @relation(fields: [softwareId], references: [id], onDelete: Cascade)
+  renewalVendor Vendor?             @relation("VendorRenewals", fields: [renewalVendorId], references: [id])
+  allocations   LicenseAllocation[]
+
+  @@map("licenses")
+}
+
+model LicenseAllocation {
+  id          String   @id @default(cuid())
+  licenseId   String
+  userId      String
+  allocatedAt DateTime @default(now())
+  allocatedBy String
+  notes       String?
+
+  license License @relation(fields: [licenseId], references: [id], onDelete: Cascade)
+
+  @@unique([licenseId, userId])
+  @@map("license_allocations")
+}
+
+model System {
+  id                 String             @id @default(cuid())
+  organizationId     String
+  name               String
+  type               SystemType
+  ownerUserId        String?
+  criticality        RiskLevel          @default(MEDIUM)
+  dataClassification DataClassification @default(INTERNAL)
+  url                String?
+  description        String?
+  notes              String?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  organization   Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  owner          User?                @relation("SystemOwner", fields: [ownerUserId], references: [id])
+  accessRegistry UserAccessRegistry[]
+
+  @@unique([organizationId, name])
+  @@map("systems")
+}
+
+model UserAccessRegistry {
+  id             String       @id @default(cuid())
+  organizationId String
+  userId         String
+  systemId       String?
+  systemName     String
+  systemType     SystemType
+  accessLevel    String
+  justification  String?
+  approvedBy     String?
+  approvedAt     DateTime?
+  reviewDueDate  DateTime?
+  status         AccessStatus @default(ACTIVE)
+  notes          String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  organization Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  system       System?        @relation(fields: [systemId], references: [id])
+  reviews      AccessReview[]
+
+  @@map("user_access_registry")
+}
+
+model AccessReview {
+  id            String         @id @default(cuid())
+  accessId      String
+  reviewerId    String
+  decision      ReviewDecision
+  justification String?
+  reviewedAt    DateTime       @default(now())
+
+  access   UserAccessRegistry @relation(fields: [accessId], references: [id], onDelete: Cascade)
+  reviewer User               @relation(fields: [reviewerId], references: [id], onDelete: Cascade)
+
+  @@map("access_reviews")
+}
+
+model ImportJob {
+  id             String       @id @default(cuid())
+  organizationId String
+  fileName       String
+  filePath       String
+  type           ImportType
+  status         ImportStatus @default(PENDING)
+  totalRows      Int
+  processedRows  Int          @default(0)
+  errorRows      Int          @default(0)
+  errors         Json?        @default("[]")
+  startedAt      DateTime     @default(now())
+  completedAt    DateTime?
+  createdBy      String
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@map("import_jobs")
+}
+
+enum RiskLevel {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum RiskTolerance {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum ReviewStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  REQUIRES_REVISION
+}
+
+enum AuditType {
+  INTERNAL
+  EXTERNAL
+  SELF_ASSESSMENT
+}
+
+enum AuditStatus {
+  ASSIGNED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum AssessmentType {
+  INITIAL
+  PERIODIC
+  FOLLOW_UP
+  REMEDIATION
+}
+
+enum AssessmentStatus {
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum ContentType {
+  ARTICLE
+  TERM
+  TEMPLATE
+  GUIDE
+  CHECKLIST
+  VIDEO
+  WEBINAR
+  CASE_STUDY
+}
+
+enum ContentStatus {
+  DRAFT
+  REVIEW
+  APPROVED
+  PUBLISHED
+  ARCHIVED
+}
+
+enum ReferenceType {
+  ARTICLE
+  TERM
+  CLAUSE
+  FRAMEWORK
+  TOPIC
+  COMPONENT
+}
+
+enum RelationshipType {
+  RELATED_TO
+  DEPENDS_ON
+  IMPLEMENTS
+  EXPLAINS
+  REFERENCES
+  SIMILAR_TO
+}
+
+enum AnalyticsAction {
+  VIEW
+  SEARCH
+  BOOKMARK
+  SHARE
+  DOWNLOAD
+  RATE
+  COMMENT
+}
+
+// ===== IT ASSET & ACCESS MANAGEMENT ENUMS =====
+
+enum AssetType {
+  LAPTOP
+  DESKTOP
+  SERVER
+  VM
+  MOBILE
+  TABLET
+  NETWORK_DEVICE
+  PERIPHERAL
+  SOFTWARE
+  LICENSE
+  OTHER
+}
+
+enum AssetStatus {
+  IN_USE
+  SPARE
+  IN_REPAIR
+  RETIRED
+  DISPOSED
+  LOST
+}
+
+enum CustomFieldType {
+  TEXT
+  NUMBER
+  DATE
+  BOOLEAN
+  SELECT
+  MULTI_SELECT
+  URL
+  EMAIL
+}
+
+enum AssetAction {
+  CREATED
+  UPDATED
+  ASSIGNED
+  TRANSFERRED
+  REPAIRED
+  RETIRED
+  DISPOSED
+  STATUS_CHANGED
+  TAG_ADDED
+  TAG_REMOVED
+  ATTACHMENT_ADDED
+  ATTACHMENT_REMOVED
+}
+
+enum RepairStatus {
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  WAITING_PARTS
+}
+
+enum DisposalMethod {
+  RECYCLED
+  DONATED
+  SOLD
+  DESTROYED
+  RETURNED_TO_VENDOR
+}
+
+enum ContractStatus {
+  ACTIVE
+  EXPIRED
+  TERMINATED
+  PENDING_RENEWAL
+}
+
+enum ApprovalStatus {
+  APPROVED
+  RESTRICTED
+  BANNED
+  PENDING
+}
+
+enum SystemType {
+  SAAS
+  ON_PREMISES
+  DATABASE
+  INFRASTRUCTURE
+  MOBILE_APP
+  DESKTOP_APP
+  API
+  OTHER
+}
+
+enum DataClassification {
+  PUBLIC
+  INTERNAL
+  CONFIDENTIAL
+  RESTRICTED
+}
+
+enum AccessStatus {
+  ACTIVE
+  SUSPENDED
+  REVOKED
+  PENDING_APPROVAL
+}
+
+enum ReviewDecision {
+  KEEP
+  REVOKE
+  MODIFY
+}
+
+enum ImportType {
+  ASSETS
+  VENDORS
+  LICENSES
+  ACCESS_REGISTRY
+  USERS
+}
+
+enum ImportStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+// Evidence Locker & Control Frameworks Module
+enum FrameworkType {
+  SOC2_TYPE_II
+  ISO_27001
+  PCI_DSS
+  GDPR
+  HIPAA
+  CUSTOM
+}
+
+enum ControlStatus {
+  MET
+  PARTIAL
+  GAP
+  NOT_APPLICABLE
+  SUBMITTED
+}
+
+enum ControlCategory {
+  PEOPLE
+  PROCESS
+  TECHNOLOGY
+}
+
+enum ControlCriticality {
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum EvidenceStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  LOCKED
+  EXPIRED
+}
+
+enum EvidenceType {
+  DOCUMENT
+  SCREENSHOT
+  REPORT
+  POLICY
+  PROCEDURE
+  CERTIFICATE
+  AUDIT_LOG
+  URL
+}
+
+enum TaskStatus {
+  OPEN
+  IN_PROGRESS
+  BLOCKED
+  COMPLETED
+  CANCELLED
+}
+
+enum TaskPriority {
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum TaskType {
+  EVIDENCE_COLLECTION
+  CONTROL_REVIEW
+  EVIDENCE_RENEWAL
+  GAP_REMEDIATION
+  AUDIT_PREPARATION
+}
+
+enum EvidenceApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+enum ApprovalLevel {
+  ANALYST
+  MANAGER
+  AUDITOR
+  CUSTOM
+}
+
+model Framework {
+  id             String        @id @default(cuid())
+  organizationId String
+  name           String
+  version        String?
+  description    String?
+  source         String?
+  type           FrameworkType
+  isActive       Boolean       @default(true)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  organization     Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  controls         Control[]
+  mappings         ControlMapping[]
+  auditRuns        AuditRun[]
+  frameworkMetrics FrameworkMetric[]
+
+  @@map("frameworks")
+}
+
+model Control {
+  id             String             @id @default(cuid())
+  organizationId String
+  frameworkId    String
+  name           String
+  description    String?
+  category       ControlCategory
+  status         ControlStatus      @default(GAP)
+  criticality    ControlCriticality @default(MEDIUM)
+  ownerUserId    String?
+  nextReviewDate DateTime?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  createdBy      String
+  updatedBy      String
+
+  organization   Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  framework      Framework             @relation(fields: [frameworkId], references: [id], onDelete: Cascade)
+  owner          User?                 @relation("ControlOwner", fields: [ownerUserId], references: [id])
+  creator        User                  @relation("ControlCreator", fields: [createdBy], references: [id])
+  updater        User                  @relation("ControlUpdater", fields: [updatedBy], references: [id])
+  evidenceLinks  ControlEvidenceLink[]
+  tasks          Task[]
+  sourceMappings ControlMapping[]      @relation("SourceControl")
+  targetMappings ControlMapping[]      @relation("TargetControl")
+
+  // Audit Automation relationships
+  auditControls      AuditControl[]
+  auditEvidenceLinks AuditEvidenceLink[]
+  auditFindings      AuditFinding[]
+
+  // Policy & Risk Management relationships
+  riskControlMappings RiskControlMapping[]
+
+  @@map("controls")
+}
+
+model ControlMapping {
+  id                String   @id @default(cuid())
+  sourceControlId   String
+  targetFrameworkId String
+  mappedControlId   String?
+  mappingType       String
+  confidenceLevel   Float    @default(1.0)
+  notes             String?
+  createdAt         DateTime @default(now())
+
+  sourceControl   Control   @relation("SourceControl", fields: [sourceControlId], references: [id], onDelete: Cascade)
+  targetFramework Framework @relation(fields: [targetFrameworkId], references: [id], onDelete: Cascade)
+  mappedControl   Control?  @relation("TargetControl", fields: [mappedControlId], references: [id], onDelete: SetNull)
+
+  @@map("control_mappings")
+}
+
+model Evidence {
+  id             String         @id @default(cuid())
+  organizationId String
+  title          String
+  description    String?
+  fileId         String?
+  url            String?
+  source         String?
+  type           EvidenceType
+  status         EvidenceStatus @default(DRAFT)
+  addedBy        String
+  addedAt        DateTime       @default(now())
+  expiryDate     DateTime?
+  hash           String?
+  version        Int            @default(1)
+  immutableFlag  Boolean        @default(false)
+  lifecycleState String         @default("active")
+  metadata       Json?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  organization Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  uploader     User                  @relation("EvidenceUploader", fields: [addedBy], references: [id])
+  versions     EvidenceVersion[]
+  controlLinks ControlEvidenceLink[]
+  tasks        Task[]
+  approvals    EvidenceApproval[]
+  tagLinks     EvidenceTagLink[]
+
+  // Audit Automation relationships
+  auditEvidenceLinks AuditEvidenceLink[]
+
+  // Integration relationships
+  automatedEvidence AutomatedEvidence[]
+  auditFindings     AuditFinding[]
+
+  @@map("evidence")
+}
+
+model EvidenceVersion {
+  id            String   @id @default(cuid())
+  evidenceId    String
+  fileId        String?
+  url           String?
+  hash          String?
+  uploadedBy    String
+  uploadedAt    DateTime @default(now())
+  changeSummary String?
+  version       Int
+
+  evidence Evidence @relation(fields: [evidenceId], references: [id], onDelete: Cascade)
+  uploader User     @relation("EvidenceVersionUploader", fields: [uploadedBy], references: [id])
+
+  @@map("evidence_versions")
+}
+
+model ControlEvidenceLink {
+  id                  String   @id @default(cuid())
+  controlId           String
+  evidenceId          String
+  linkedBy            String
+  linkedAt            DateTime @default(now())
+  linkType            String   @default("supports")
+  effectivenessRating Float?   @default(1.0)
+  notes               String?
+
+  control  Control  @relation(fields: [controlId], references: [id], onDelete: Cascade)
+  evidence Evidence @relation(fields: [evidenceId], references: [id], onDelete: Cascade)
+  linker   User     @relation("ControlEvidenceLinker", fields: [linkedBy], references: [id])
+
+  @@unique([controlId, evidenceId])
+  @@map("control_evidence_links")
+}
+
+model EvidenceTag {
+  id             String   @id @default(cuid())
+  organizationId String
+  name           String
+  color          String   @default("#3B82F6")
+  description    String?
+  createdAt      DateTime @default(now())
+
+  organization  Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  evidenceLinks EvidenceTagLink[]
+
+  @@unique([organizationId, name])
+  @@map("evidence_tags")
+}
+
+model EvidenceTagLink {
+  evidenceId String
+  tagId      String
+
+  evidence Evidence    @relation(fields: [evidenceId], references: [id], onDelete: Cascade)
+  tag      EvidenceTag @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([evidenceId, tagId])
+  @@map("evidence_tag_links")
+}
+
+model Task {
+  id             String       @id @default(cuid())
+  organizationId String
+  type           TaskType
+  controlId      String?
+  evidenceId     String?
+  assigneeId     String?
+  status         TaskStatus   @default(OPEN)
+  dueDate        DateTime?
+  priority       TaskPriority @default(MEDIUM)
+  comments       String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  createdBy      String
+  completedBy    String?
+  completedAt    DateTime?
+
+  // Audit Automation fields
+  auditRunId String?
+  auditPhase AuditPhase?
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  control      Control?     @relation(fields: [controlId], references: [id], onDelete: SetNull)
+  evidence     Evidence?    @relation(fields: [evidenceId], references: [id], onDelete: SetNull)
+  assignee     User?        @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  creator      User         @relation("TaskCreator", fields: [createdBy], references: [id])
+  completer    User?        @relation("TaskCompleter", fields: [completedBy], references: [id])
+
+  // Audit Automation relationships
+  auditRun AuditRun? @relation(fields: [auditRunId], references: [id], onDelete: SetNull)
+
+  @@map("tasks")
+}
+
+model EvidenceApproval {
+  id             String                 @id @default(cuid())
+  evidenceId     String
+  approverId     String
+  approvalStatus EvidenceApprovalStatus @default(PENDING)
+  approvalDate   DateTime?
+  comments       String?
+  approvalLevel  ApprovalLevel
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+
+  evidence Evidence @relation(fields: [evidenceId], references: [id], onDelete: Cascade)
+  approver User     @relation("EvidenceApprover", fields: [approverId], references: [id])
+
+  @@map("evidence_approvals")
+}
+
+// ===== AUDIT AUTOMATION MODULE =====
+
+enum AuditRunStatus {
+  DRAFT
+  IN_PROGRESS
+  REVIEW
+  FINDINGS_RESOLUTION
+  LOCKED
+  ARCHIVED
+}
+
+enum AuditPhase {
+  PLANNING
+  EXECUTION
+  REVIEW
+  REMEDIATION
+}
+
+enum FindingSeverity {
+  CRITICAL
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum FindingStatus {
+  OPEN
+  IN_PROGRESS
+  PENDING_VALIDATION
+  MITIGATED
+  CLOSED
+  REOPENED
+}
+
+enum AuditActivityType {
+  CREATED
+  UPDATED
+  STATUS_CHANGED
+  ASSIGNED
+  REVIEWED
+  APPROVED
+  REJECTED
+  FINDING_CREATED
+  FINDING_UPDATED
+  FINDING_RESOLVED
+  EVIDENCE_LINKED
+  EVIDENCE_UNLINKED
+  PACKAGE_EXPORTED
+  AUDIT_LOCKED
+}
+
+enum ExportFormat {
+  PDF
+  ZIP
+  EXCEL
+  JSON
+}
+
+model AuditRun {
+  id                  String         @id @default(cuid())
+  organizationId      String
+  name                String
+  description         String?
+  frameworkId         String?
+  scope               String?
+  createdBy           String
+  startDate           DateTime
+  endDate             DateTime
+  status              AuditRunStatus @default(DRAFT)
+  lockedAt            DateTime?
+  recurrenceSchedule  String?
+  auditType           AuditType      @default(INTERNAL)
+  externalAuditorInfo Json?
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  framework    Framework?   @relation(fields: [frameworkId], references: [id], onDelete: SetNull)
+  creator      User         @relation("AuditRunCreator", fields: [createdBy], references: [id])
+
+  auditControls      AuditControl[]
+  auditEvidenceLinks AuditEvidenceLink[]
+  auditFindings      AuditFinding[]
+  auditPackExports   AuditPackExport[]
+  auditActivities    AuditRunActivity[]
+  tasks              Task[]
+  guestAuditors      GuestAuditor[]
+  notifications      Notification[]
+
+  @@map("audit_runs")
+}
+
+model AuditControl {
+  id              String        @id @default(cuid())
+  auditRunId      String
+  controlId       String
+  status          ControlStatus @default(GAP)
+  reviewerId      String?
+  approverId      String?
+  notes           String?
+  submittedAt     DateTime?
+  approvedAt      DateTime?
+  rejectionReason String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  auditRun AuditRun @relation(fields: [auditRunId], references: [id], onDelete: Cascade)
+  control  Control  @relation(fields: [controlId], references: [id], onDelete: Cascade)
+  reviewer User?    @relation("AuditControlReviewer", fields: [reviewerId], references: [id])
+  approver User?    @relation("AuditControlApprover", fields: [approverId], references: [id])
+
+  auditFindings AuditFinding[]
+
+  @@unique([auditRunId, controlId])
+  @@map("audit_controls")
+}
+
+model AuditEvidenceLink {
+  id            String   @id @default(cuid())
+  auditRunId    String
+  controlId     String
+  evidenceId    String
+  linkedBy      String
+  linkedAt      DateTime @default(now())
+  lockedFlag    Boolean  @default(false)
+  snapshotHash  String?
+  versionLocked Int?
+
+  auditRun AuditRun @relation(fields: [auditRunId], references: [id], onDelete: Cascade)
+  control  Control  @relation(fields: [controlId], references: [id], onDelete: Cascade)
+  evidence Evidence @relation(fields: [evidenceId], references: [id], onDelete: Cascade)
+  linker   User     @relation("AuditEvidenceLinker", fields: [linkedBy], references: [id])
+
+  @@unique([auditRunId, controlId, evidenceId])
+  @@map("audit_evidence_links")
+}
+
+model AuditFinding {
+  id                   String          @id @default(cuid())
+  auditRunId           String
+  controlId            String?
+  auditControlId       String?
+  severity             FindingSeverity
+  title                String
+  description          String
+  remediationPlan      String?
+  ownerId              String?
+  dueDate              DateTime?
+  status               FindingStatus   @default(OPEN)
+  resolutionEvidenceId String?
+  createdAt            DateTime        @default(now())
+  updatedAt            DateTime        @updatedAt
+
+  auditRun           AuditRun      @relation(fields: [auditRunId], references: [id], onDelete: Cascade)
+  control            Control?      @relation(fields: [controlId], references: [id], onDelete: SetNull)
+  auditControl       AuditControl? @relation(fields: [auditControlId], references: [id], onDelete: SetNull)
+  owner              User?         @relation("AuditFindingOwner", fields: [ownerId], references: [id])
+  resolutionEvidence Evidence?     @relation(fields: [resolutionEvidenceId], references: [id], onDelete: SetNull)
+
+  @@map("audit_findings")
+}
+
+model AuditPackExport {
+  id            String       @id @default(cuid())
+  auditRunId    String
+  fileId        String
+  format        ExportFormat
+  exportScope   String?
+  requestedBy   String
+  checksum      String?
+  immutableFlag Boolean      @default(false)
+  createdAt     DateTime     @default(now())
+
+  auditRun  AuditRun @relation(fields: [auditRunId], references: [id], onDelete: Cascade)
+  requester User     @relation("AuditPackRequester", fields: [requestedBy], references: [id])
+
+  @@map("audit_pack_exports")
+}
+
+model AuditRunActivity {
+  id           String            @id @default(cuid())
+  auditRunId   String
+  activityType AuditActivityType
+  performedBy  String
+  targetEntity String?
+  oldValue     String?
+  newValue     String?
+  timestamp    DateTime          @default(now())
+  ipAddress    String?
+
+  auditRun  AuditRun @relation(fields: [auditRunId], references: [id], onDelete: Cascade)
+  performer User     @relation("AuditActivityPerformer", fields: [performedBy], references: [id])
+
+  @@map("audit_run_activities")
+}
+
+model GuestAuditor {
+  id           String    @id @default(cuid())
+  auditRunId   String
+  email        String
+  name         String
+  role         String?
+  accessLevel  String    @default("READ_ONLY")
+  invitedBy    String
+  invitedAt    DateTime  @default(now())
+  acceptedAt   DateTime?
+  expiresAt    DateTime?
+  isActive     Boolean   @default(true)
+  lastAccessAt DateTime?
+
+  auditRun AuditRun @relation(fields: [auditRunId], references: [id], onDelete: Cascade)
+  inviter  User     @relation("GuestAuditorInviter", fields: [invitedBy], references: [id])
+
+  @@unique([auditRunId, email])
+  @@map("guest_auditors")
+}
+
+// ===== NOTIFICATION SYSTEM =====
+
+enum NotificationType {
+  AUDIT_CREATED
+  AUDIT_UPDATED
+  AUDIT_STATUS_CHANGED
+  CONTROL_ASSIGNED
+  CONTROL_REVIEWED
+  CONTROL_APPROVED
+  CONTROL_REJECTED
+  FINDING_CREATED
+  FINDING_UPDATED
+  FINDING_ASSIGNED
+  FINDING_RESOLVED
+  EVIDENCE_UPLOADED
+  EVIDENCE_LINKED
+  TASK_ASSIGNED
+  TASK_COMPLETED
+  TASK_OVERDUE
+  GUEST_AUDITOR_INVITED
+  GUEST_AUDITOR_ACCEPTED
+  AUDIT_PACK_EXPORTED
+  DEADLINE_REMINDER
+  SYSTEM_ALERT
+}
+
+enum NotificationPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum NotificationStatus {
+  UNREAD
+  READ
+  ARCHIVED
+}
+
+enum NotificationChannel {
+  IN_APP
+  EMAIL
+  SLACK
+  TEAMS
+  SMS
+}
+
+model Notification {
+  id             String                @id @default(cuid())
+  recipientId    String
+  type           NotificationType
+  title          String
+  message        String
+  auditRunId     String?
+  metadata       Json?
+  priority       NotificationPriority  @default(MEDIUM)
+  status         NotificationStatus    @default(UNREAD)
+  channels       NotificationChannel[]
+  sentAt         DateTime?
+  readAt         DateTime?
+  archivedAt     DateTime?
+  createdBy      String
+  organizationId String
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+
+  recipient     User         @relation("NotificationRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+  createdByUser User         @relation("NotificationCreator", fields: [createdBy], references: [id])
+  auditRun      AuditRun?    @relation(fields: [auditRunId], references: [id], onDelete: SetNull)
+  organization  Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+// ===== AUTOMATED INTEGRATIONS MODULE =====
+
+enum IntegrationProviderType {
+  IDENTITY_PROVIDER
+  CLOUD_SECURITY
+  HRIS_SYSTEM
+  TICKETING_SYSTEM
+  MONITORING_TOOL
+  CUSTOM
+}
+
+enum IntegrationCategory {
+  GOOGLE_WORKSPACE
+  MICROSOFT_ENTRA_ID
+  OKTA
+  AWS_CONFIG
+  AZURE_SECURITY_CENTER
+  GCP_SECURITY_COMMAND_CENTER
+  BAMBOO_HR
+  WORKDAY
+  JIRA
+  SERVICENOW
+  SPLUNK
+  DATADOG
+  NEW_RELIC
+  CUSTOM_PROVIDER
+}
+
+enum AuthType {
+  OAUTH2
+  API_KEY
+  SERVICE_ACCOUNT
+  WEBHOOK
+  BASIC_AUTH
+}
+
+enum ConnectionStatus {
+  ACTIVE
+  INACTIVE
+  ERROR
+  PENDING_SETUP
+  EXPIRED
+  SUSPENDED
+}
+
+enum SyncType {
+  REAL_TIME
+  SCHEDULED
+  MANUAL
+  ON_DEMAND
+}
+
+enum JobStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+  RETRYING
+}
+
+enum JobType {
+  FULL_SYNC
+  INCREMENTAL_SYNC
+  EVIDENCE_GENERATION
+  DATA_VALIDATION
+  CLEANUP
+}
+
+enum EvidenceAutomationStatus {
+  PENDING
+  GENERATED
+  VALIDATED
+  APPROVED
+  REJECTED
+  EXPIRED
+}
+
+model IntegrationProvider {
+  id                String                  @id @default(cuid())
+  name              String                  @unique
+  displayName       String
+  type              IntegrationProviderType
+  category          IntegrationCategory
+  authType          AuthType
+  supportedScopes   String[] // JSON array of supported OAuth scopes
+  apiVersion        String?
+  documentationUrl  String?
+  logoUrl           String?
+  isActive          Boolean                 @default(true)
+  setupInstructions Json? // Provider-specific setup instructions
+  capabilities      Json? // Supported features and capabilities
+  createdAt         DateTime                @default(now())
+  updatedAt         DateTime                @updatedAt
+
+  connections IntegrationConnection[]
+  templates   IntegrationTemplate[]
+
+  @@map("integration_providers")
+}
+
+model IntegrationConnection {
+  id                   String           @id @default(cuid())
+  organizationId       String
+  providerId           String
+  connectionName       String
+  credentialsEncrypted String? // Encrypted credentials/tokens
+  authMetadata         Json? // OAuth tokens, API keys metadata
+  status               ConnectionStatus @default(PENDING_SETUP)
+  syncSchedule         String? // Cron expression for scheduled syncs
+  lastSyncAt           DateTime?
+  nextSyncAt           DateTime?
+  syncFrequency        Int? // Minutes between syncs
+  errorCount           Int              @default(0)
+  lastErrorAt          DateTime?
+  lastErrorMessage     String?
+  createdBy            String
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+
+  organization Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  provider     IntegrationProvider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  creator      User                @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+
+  logs              IntegrationLog[]
+  jobs              IntegrationJob[]
+  automatedEvidence AutomatedEvidence[]
+  webhooks          IntegrationWebhook[]
+
+  @@index([organizationId, status])
+  @@index([providerId, status])
+  @@map("integration_connections")
+}
+
+model IntegrationLog {
+  id               String    @id @default(cuid())
+  organizationId   String
+  connectionId     String
+  provider         String
+  syncType         SyncType
+  action           String
+  status           String
+  recordsProcessed Int       @default(0)
+  errorsCount      Int       @default(0)
+  durationSeconds  Float?
+  startedAt        DateTime  @default(now())
+  completedAt      DateTime?
+  errorDetails     Json?
+  metadata         Json? // Additional sync metadata
+
+  organization Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  connection   IntegrationConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, startedAt])
+  @@index([connectionId, startedAt])
+  @@map("integration_logs")
+}
+
+model IntegrationJob {
+  id           String    @id @default(cuid())
+  connectionId String
+  jobType      JobType
+  status       JobStatus @default(PENDING)
+  priority     Int       @default(5) // 1-10, 1 being highest priority
+  scheduledAt  DateTime  @default(now())
+  startedAt    DateTime?
+  completedAt  DateTime?
+  retryCount   Int       @default(0)
+  maxRetries   Int       @default(3)
+  jobData      Json? // Job-specific configuration and parameters
+  resultData   Json? // Job execution results
+  errorMessage String?
+  progress     Float? // 0-100 progress percentage
+
+  connection IntegrationConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+
+  @@index([connectionId, status])
+  @@index([status, scheduledAt])
+  @@map("integration_jobs")
+}
+
+model AutomatedEvidence {
+  id               String                   @id @default(cuid())
+  organizationId   String
+  connectionId     String
+  evidenceId       String
+  automationStatus EvidenceAutomationStatus @default(PENDING)
+  sourceData       Json // Original data from integration
+  processedData    Json? // Processed/normalized data
+  controlMappings  String[] // Array of control IDs this evidence supports
+  qualityScore     Float? // 0-100 quality assessment
+  validationRules  Json? // Applied validation rules
+  generatedAt      DateTime                 @default(now())
+  validatedAt      DateTime?
+  approvedAt       DateTime?
+  expiresAt        DateTime?
+  lastUpdatedAt    DateTime                 @default(now())
+  createdBy        String
+
+  organization Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  connection   IntegrationConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  evidence     Evidence              @relation(fields: [evidenceId], references: [id], onDelete: Cascade)
+  creator      User                  @relation("AutomatedEvidenceCreator", fields: [createdBy], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, automationStatus])
+  @@index([connectionId, automationStatus])
+  @@index([evidenceId])
+  @@map("automated_evidence")
+}
+
+model IntegrationWebhook {
+  id              String    @id @default(cuid())
+  organizationId  String
+  connectionId    String
+  webhookUrl      String
+  secret          String // Encrypted webhook secret
+  events          String[] // Array of subscribed events
+  isActive        Boolean   @default(true)
+  lastTriggeredAt DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  organization Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  connection   IntegrationConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+
+  @@map("integration_webhooks")
+}
+
+model IntegrationTemplate {
+  id             String   @id @default(cuid())
+  organizationId String?
+  providerId     String
+  name           String
+  description    String?
+  configuration  Json // Template configuration
+  isPublic       Boolean  @default(false)
+  isDefault      Boolean  @default(false)
+  usageCount     Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization?       @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  provider     IntegrationProvider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+
+  @@map("integration_templates")
+}
+
+// ===== SECURITY POSTURE DASHBOARD MODULE =====
+
+enum MetricType {
+  COMPLIANCE_SCORE
+  FRAMEWORK_COVERAGE
+  CONTROL_STATUS
+  EVIDENCE_HEALTH
+  TASK_PERFORMANCE
+  AUDIT_READINESS
+  FINDING_MANAGEMENT
+  RISK_POSTURE
+  USER_PRODUCTIVITY
+  SYSTEM_PERFORMANCE
+}
+
+enum MetricCategory {
+  COMPLIANCE
+  EVIDENCE
+  OPERATIONAL
+  AUDIT
+  RISK
+  PERFORMANCE
+}
+
+enum WidgetType {
+  COMPLIANCE_SCORE
+  FRAMEWORK_COVERAGE
+  CONTROL_STATUS_DISTRIBUTION
+  COMPLIANCE_HEATMAP
+  EVIDENCE_EXPIRATION_MONITOR
+  EVIDENCE_UTILIZATION_ANALYTICS
+  EVIDENCE_APPROVAL_PIPELINE
+  TASK_MANAGEMENT_DASHBOARD
+  WORKFLOW_EFFICIENCY_METRICS
+  AUDIT_READINESS_SCORECARD
+  FINDINGS_MANAGEMENT_ANALYTICS
+  AUDIT_HISTORY_TIMELINE
+  RISK_POSTURE_OVERVIEW
+  POLICY_COMPLIANCE_TRACKING
+  TREND_ANALYSIS
+  COMPARATIVE_ANALYTICS
+  EXECUTIVE_SUMMARY
+  CUSTOM_METRIC
+}
+
+enum WidgetSize {
+  SMALL
+  MEDIUM
+  LARGE
+  EXTRA_LARGE
+}
+
+enum DashboardRole {
+  EXECUTIVE
+  MANAGER
+  ANALYST
+  AUDITOR
+  CUSTOM
+}
+
+enum AlertSeverity {
+  INFO
+  WARNING
+  CRITICAL
+  EMERGENCY
+}
+
+enum AlertStatus {
+  ACTIVE
+  ACKNOWLEDGED
+  RESOLVED
+  SUPPRESSED
+}
+
+enum EventType {
+  COMPLIANCE_CHANGE
+  EVIDENCE_EXPIRING
+  TASK_OVERDUE
+  AUDIT_STATUS_CHANGE
+  CONTROL_STATUS_CHANGE
+  FINDING_CREATED
+  RISK_THRESHOLD_EXCEEDED
+  SYSTEM_PERFORMANCE_ISSUE
+  USER_ACTION
+  DATA_UPDATE
+}
+
+model MetricSnapshot {
+  id                String         @id @default(cuid())
+  organizationId    String
+  metricType        MetricType
+  metricCategory    MetricCategory
+  value             Float
+  metadata          Json?
+  capturedAt        DateTime       @default(now())
+  calculationMethod String?
+  dataSource        String?
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, metricType, capturedAt])
+  @@map("metric_snapshots")
+}
+
+model DashboardWidget {
+  id              String     @id @default(cuid())
+  organizationId  String
+  userId          String?
+  widgetType      WidgetType
+  position        Json // {x, y, width, height}
+  size            WidgetSize @default(MEDIUM)
+  config          Json // Widget-specific configuration
+  visibilityRules Json? // Role-based visibility rules
+  isActive        Boolean    @default(true)
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User?        @relation("DashboardWidgetUser", fields: [userId], references: [id], onDelete: SetNull)
+
+  @@map("dashboard_widgets")
+}
+
+model FrameworkMetric {
+  id                    String   @id @default(cuid())
+  organizationId        String
+  frameworkId           String
+  coveragePercentage    Float
+  controlsMet           Int
+  controlsPartial       Int
+  controlsGap           Int
+  controlsNotApplicable Int      @default(0)
+  snapshotDate          DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  framework    Framework    @relation(fields: [frameworkId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, frameworkId, snapshotDate])
+  @@map("framework_metrics")
+}
+
+model EvidenceMetric {
+  id                    String   @id @default(cuid())
+  organizationId        String
+  totalEvidence         Int
+  expiring30Days        Int
+  expiring60Days        Int
+  expiring90Days        Int
+  reusePercentage       Float
+  approvalBacklog       Int
+  averageProcessingTime Float? // in hours
+  qualityScore          Float? // 0-100
+  snapshotDate          DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, snapshotDate])
+  @@map("evidence_metrics")
+}
+
+model TaskMetric {
+  id                    String   @id @default(cuid())
+  organizationId        String
+  totalTasks            Int
+  completedTasks        Int
+  overdueTasks          Int
+  averageCompletionTime Float? // in hours
+  slaComplianceRate     Float? // percentage
+  productivityScore     Float? // 0-100
+  snapshotDate          DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, snapshotDate])
+  @@map("task_metrics")
+}
+
+model DashboardEvent {
+  id             String    @id @default(cuid())
+  organizationId String
+  eventType      EventType
+  eventData      Json
+  timestamp      DateTime  @default(now())
+  processed      Boolean   @default(false)
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, eventType, timestamp])
+  @@map("dashboard_events")
+}
+
+model DashboardAlert {
+  id             String        @id @default(cuid())
+  organizationId String
+  userId         String?
+  alertType      String
+  severity       AlertSeverity
+  title          String
+  message        String
+  status         AlertStatus   @default(ACTIVE)
+  threshold      Float?
+  currentValue   Float?
+  metadata       Json?
+  acknowledgedAt DateTime?
+  resolvedAt     DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User?        @relation("DashboardAlertUser", fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, status, createdAt])
+  @@map("dashboard_alerts")
+}
+
+model DashboardTemplate {
+  id             String        @id @default(cuid())
+  organizationId String?
+  name           String
+  description    String?
+  role           DashboardRole
+  widgets        Json // Array of widget configurations
+  isPublic       Boolean       @default(false)
+  isDefault      Boolean       @default(false)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+
+  @@map("dashboard_templates")
+}
+
+model MetricDependency {
+  id               String     @id @default(cuid())
+  parentMetricType MetricType
+  childMetricType  MetricType
+  calculationOrder Int
+  dependencyWeight Float?     @default(1.0)
+
+  @@unique([parentMetricType, childMetricType])
+  @@map("metric_dependencies")
+}
+
+model MetricValidationRule {
+  id                   String     @id @default(cuid())
+  metricType           MetricType
+  validationExpression String
+  errorThreshold       Float?
+  warningThreshold     Float?
+  isActive             Boolean    @default(true)
+
+  @@map("metric_validation_rules")
+}
+
+// ===== SECURITY QUESTIONNAIRE AUTOMATION MODULE =====
+
+enum QuestionnaireStatus {
+  UPLOADED
+  PARSING
+  PARSED
+  IN_PROGRESS
+  UNDER_REVIEW
+  APPROVED
+  EXPORTED
+  DELIVERED
+  ARCHIVED
+}
+
+enum QuestionType {
+  TEXT_INPUT
+  MULTIPLE_CHOICE
+  YES_NO
+  RATING_SCALE
+  DATE_PICKER
+  FILE_UPLOAD
+  CHECKBOX_LIST
+  DROPDOWN
+}
+
+enum AnswerStatus {
+  DRAFT
+  SUBMITTED
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+  REQUIRES_REVISION
+}
+
+enum ExportType {
+  EXCEL
+  WORD
+  PDF
+  CSV
+  ZIP_PACKAGE
+}
+
+enum AnswerLibraryCategory {
+  ACCESS_CONTROL
+  DATA_PROTECTION
+  INCIDENT_RESPONSE
+  NETWORK_SECURITY
+  PHYSICAL_SECURITY
+  BUSINESS_CONTINUITY
+  VENDOR_MANAGEMENT
+  COMPLIANCE_FRAMEWORK
+  GENERAL_SECURITY
+  CUSTOM
+}
+
+model Questionnaire {
+  id                 String              @id @default(cuid())
+  organizationId     String
+  title              String
+  description        String?
+  sourceFileId       String? // Reference to uploaded file
+  clientName         String?
+  frameworkMapping   String[] // Array of compliance frameworks
+  uploadedBy         String
+  assignedTo         String?
+  status             QuestionnaireStatus @default(UPLOADED)
+  priority           Int                 @default(5) // 1-10, 1 being highest
+  dueDate            DateTime?
+  completionDate     DateTime?
+  totalQuestions     Int                 @default(0)
+  completedQuestions Int                 @default(0)
+  metadata           Json? // Additional questionnaire metadata
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  uploader     User         @relation("QuestionnaireUploader", fields: [uploadedBy], references: [id], onDelete: Cascade)
+  assignee     User?        @relation("QuestionnaireAssignee", fields: [assignedTo], references: [id], onDelete: SetNull)
+
+  questions  Question[]
+  exports    QuestionnaireExport[]
+  activities QuestionnaireActivity[]
+
+  @@index([organizationId, status])
+  @@index([organizationId, dueDate])
+  @@index([assignedTo, status])
+  @@map("questionnaires")
+}
+
+model Question {
+  id                String       @id @default(cuid())
+  questionnaireId   String
+  section           String?
+  subsection        String?
+  orderIndex        Int
+  questionText      String
+  questionType      QuestionType
+  optionsJson       Json? // For multiple choice, dropdown, etc.
+  requiredFlag      Boolean      @default(false)
+  controlMapping    String[] // Array of control IDs this question maps to
+  riskLevel         String? // LOW, MEDIUM, HIGH, CRITICAL
+  keywordsExtracted String[] // Extracted keywords for search
+  dependencies      Json? // Conditional logic and dependencies
+  metadata          Json? // Additional question metadata
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  questionnaire Questionnaire @relation(fields: [questionnaireId], references: [id], onDelete: Cascade)
+  answers       Answer[]
+
+  @@index([questionnaireId, orderIndex])
+  @@index([questionnaireId, section])
+  @@map("questions")
+}
+
+model Answer {
+  id              String       @id @default(cuid())
+  questionId      String
+  draftText       String?
+  finalText       String?
+  evidenceIds     String[] // Array of evidence document IDs
+  status          AnswerStatus @default(DRAFT)
+  confidenceScore Float? // 0-100 confidence in automated suggestion
+  reviewerId      String?
+  approverId      String?
+  submittedAt     DateTime?
+  approvedAt      DateTime?
+  rejectionReason String?
+  revisionNotes   String?
+  sourceLibraryId String? // Reference to answer library if used
+  metadata        Json? // Additional answer metadata
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  question      Question       @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  reviewer      User?          @relation("AnswerReviewer", fields: [reviewerId], references: [id], onDelete: SetNull)
+  approver      User?          @relation("AnswerApprover", fields: [approverId], references: [id], onDelete: SetNull)
+  sourceLibrary AnswerLibrary? @relation(fields: [sourceLibraryId], references: [id], onDelete: SetNull)
+
+  @@index([questionId, status])
+  @@index([status, submittedAt])
+  @@map("answers")
+}
+
+model AnswerLibrary {
+  id                 String                @id @default(cuid())
+  organizationId     String
+  category           AnswerLibraryCategory
+  subcategory        String?
+  keyPhrases         String[] // Keywords for matching
+  standardAnswer     String
+  evidenceReferences String[] // Array of evidence document IDs
+  usageCount         Int                   @default(0)
+  confidenceScore    Float                 @default(0) // 0-100
+  lastUsedAt         DateTime?
+  lastUpdated        DateTime              @default(now())
+  createdBy          String
+  isActive           Boolean               @default(true)
+  metadata           Json? // Additional library metadata
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  creator      User         @relation("AnswerLibraryCreator", fields: [createdBy], references: [id], onDelete: Cascade)
+
+  answers Answer[]
+
+  @@index([organizationId, category])
+  @@index([organizationId, keyPhrases])
+  @@map("answer_library")
+}
+
+model QuestionnaireExport {
+  id              String     @id @default(cuid())
+  questionnaireId String
+  exportType      ExportType
+  fileId          String? // Reference to generated file
+  exportedBy      String
+  exportedAt      DateTime   @default(now())
+  downloadCount   Int        @default(0)
+  integrityHash   String? // Hash for integrity verification
+  expiryDate      DateTime?
+  metadata        Json? // Export metadata
+
+  questionnaire Questionnaire @relation(fields: [questionnaireId], references: [id], onDelete: Cascade)
+  exporter      User          @relation("QuestionnaireExporter", fields: [exportedBy], references: [id], onDelete: Cascade)
+
+  @@index([questionnaireId, exportedAt])
+  @@map("questionnaire_exports")
+}
+
+model QuestionnaireActivity {
+  id              String   @id @default(cuid())
+  questionnaireId String
+  userId          String
+  activityType    String // UPLOADED, PARSED, ANSWERED, REVIEWED, APPROVED, EXPORTED, etc.
+  description     String?
+  metadata        Json? // Additional activity metadata
+  timestamp       DateTime @default(now())
+
+  questionnaire Questionnaire @relation(fields: [questionnaireId], references: [id], onDelete: Cascade)
+  user          User          @relation("QuestionnaireActivityUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([questionnaireId, timestamp])
+  @@map("questionnaire_activities")
+}
+
+// ===== POLICY & RISK MANAGEMENT MODULE =====
+
+enum PolicyStatus {
+  DRAFT
+  UNDER_REVIEW
+  APPROVED
+  PUBLISHED
+  ARCHIVED
+  SUPERSEDED
+}
+
+enum PolicyType {
+  INFORMATION_SECURITY
+  DATA_PROTECTION
+  ACCESS_CONTROL
+  INCIDENT_RESPONSE
+  BUSINESS_CONTINUITY
+  VENDOR_MANAGEMENT
+  COMPLIANCE
+  OPERATIONAL
+  STRATEGIC
+  CUSTOM
+}
+
+enum PolicyCategory {
+  GOVERNANCE
+  OPERATIONAL
+  TECHNICAL
+  LEGAL
+  COMPLIANCE
+  RISK_MANAGEMENT
+  HUMAN_RESOURCES
+  FINANCE
+  CUSTOM
+}
+
+enum AcknowledgmentMethod {
+  DIGITAL_SIGNATURE
+  ELECTRONIC_SIGNATURE
+  QUIZ_COMPLETION
+  VIDEO_VIEWING
+  MOBILE_APP
+  WEB_PORTAL
+  DELEGATED
+  OFFLINE_SYNC
+}
+
+enum AcknowledgmentStatus {
+  PENDING
+  ACKNOWLEDGED
+  OVERDUE
+  ESCALATED
+  EXCEPTION
+  DELEGATED
+}
+
+enum RiskStatus {
+  IDENTIFIED
+  ASSESSED
+  TREATMENT_PLANNED
+  TREATMENT_IMPLEMENTED
+  MONITORED
+  CLOSED
+  REOPENED
+}
+
+enum RiskCategory {
+  STRATEGIC
+  OPERATIONAL
+  FINANCIAL
+  COMPLIANCE
+  SECURITY
+  TECHNOLOGY
+  HUMAN_RESOURCES
+  SUPPLY_CHAIN
+  REPUTATION
+  REGULATORY
+  CUSTOM
+}
+
+enum RiskSubcategory {
+  MARKET_RISK
+  COMPETITIVE_RISK
+  INNOVATION_RISK
+  REPUTATION_RISK
+  PROCESS_RISK
+  TECHNOLOGY_RISK
+  HUMAN_RESOURCE_RISK
+  SUPPLY_CHAIN_RISK
+  CREDIT_RISK
+  LIQUIDITY_RISK
+  CYBERSECURITY_RISK
+  PHYSICAL_SECURITY_RISK
+  DATA_PROTECTION_RISK
+  PRIVACY_RISK
+  REGULATORY_RISK
+  LEGAL_RISK
+  CONTRACTUAL_RISK
+  POLICY_RISK
+  CUSTOM
+}
+
+enum TreatmentStrategy {
+  AVOID
+  TRANSFER
+  MITIGATE
+  ACCEPT
+  EXPLOIT
+  COMBINATION
+}
+
+enum TreatmentStatus {
+  PLANNED
+  IN_PROGRESS
+  COMPLETED
+  ON_HOLD
+  CANCELLED
+  FAILED
+}
+
+enum MappingType {
+  DIRECT_CONTROL
+  COMPENSATING_CONTROL
+  DETECTIVE_CONTROL
+  PREVENTIVE_CONTROL
+  CORRECTIVE_CONTROL
+  MONITORING_CONTROL
+}
+
+enum AssessmentMethodology {
+  QUANTITATIVE
+  QUALITATIVE
+  SEMI_QUANTITATIVE
+  EXPERT_JUDGMENT
+  DELPHI_METHOD
+  MONTE_CARLO
+  SCENARIO_ANALYSIS
+  SENSITIVITY_ANALYSIS
+  CUSTOM
+}
+
+enum SeverityLevel {
+  VERY_LOW
+  LOW
+  MEDIUM
+  HIGH
+  VERY_HIGH
+  CRITICAL
+}
+
+enum LikelihoodLevel {
+  VERY_UNLIKELY
+  UNLIKELY
+  POSSIBLE
+  LIKELY
+  VERY_LIKELY
+  CERTAIN
+}
+
+enum ImpactLevel {
+  VERY_LOW
+  LOW
+  MEDIUM
+  HIGH
+  VERY_HIGH
+  CRITICAL
+}
+
+model Policy {
+  id              String         @id @default(cuid())
+  organizationId  String
+  title           String
+  description     String?
+  category        PolicyCategory
+  policyType      PolicyType
+  version         String         @default("1.0.0")
+  status          PolicyStatus   @default(DRAFT)
+  ownerId         String
+  reviewerId      String?
+  approverId      String?
+  publishedAt     DateTime?
+  effectiveDate   DateTime?
+  nextReviewDate  DateTime?
+  retentionPeriod Int? // in days
+  fileId          String? // Reference to policy document
+  metadata        Json? // Additional policy metadata
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  owner        User         @relation("PolicyOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  reviewer     User?        @relation("PolicyReviewer", fields: [reviewerId], references: [id], onDelete: SetNull)
+  approver     User?        @relation("PolicyApprover", fields: [approverId], references: [id], onDelete: SetNull)
+
+  versions        PolicyVersion[]
+  acknowledgments PolicyAcknowledgment[]
+  assignments     PolicyAssignment[]
+  riskMappings    RiskPolicyMapping[]
+
+  @@index([organizationId, status])
+  @@index([organizationId, category])
+  @@index([organizationId, effectiveDate])
+  @@index([ownerId, status])
+  @@map("policies")
+}
+
+model PolicyVersion {
+  id            String    @id @default(cuid())
+  policyId      String
+  version       String
+  fileId        String? // Reference to version document
+  changeSummary String?
+  createdAt     DateTime  @default(now())
+  createdBy     String
+  approvedAt    DateTime?
+  approvedBy    String?
+  supersededAt  DateTime?
+  diffSummary   Json? // Detailed change tracking
+  metadata      Json? // Additional version metadata
+
+  policy   Policy @relation(fields: [policyId], references: [id], onDelete: Cascade)
+  creator  User   @relation("PolicyVersionCreator", fields: [createdBy], references: [id], onDelete: Cascade)
+  approver User?  @relation("PolicyVersionApprover", fields: [approvedBy], references: [id], onDelete: SetNull)
+
+  @@index([policyId, version])
+  @@index([policyId, createdAt])
+  @@map("policy_versions")
+}
+
+model PolicyAcknowledgment {
+  id              String                @id @default(cuid())
+  policyId        String
+  policyVersion   String
+  userId          String
+  acknowledgedAt  DateTime?
+  method          AcknowledgmentMethod?
+  ipAddress       String?
+  userAgent       String?
+  reminderCount   Int                   @default(0)
+  escalatedAt     DateTime?
+  exceptionReason String?
+  status          AcknowledgmentStatus  @default(PENDING)
+  metadata        Json? // Additional acknowledgment metadata
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+
+  policy Policy @relation(fields: [policyId], references: [id], onDelete: Cascade)
+  user   User   @relation("PolicyAcknowledgmentUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([policyId, status])
+  @@index([userId, status])
+  @@index([policyId, acknowledgedAt])
+  @@map("policy_acknowledgments")
+}
+
+model PolicyAssignment {
+  id             String    @id @default(cuid())
+  policyId       String
+  userGroup      String? // User group or role
+  assignmentType String // INDIVIDUAL, GROUP, ROLE, DEPARTMENT
+  assignedBy     String
+  assignedAt     DateTime  @default(now())
+  dueDate        DateTime?
+  mandatoryFlag  Boolean   @default(true)
+  metadata       Json? // Additional assignment metadata
+
+  policy   Policy @relation(fields: [policyId], references: [id], onDelete: Cascade)
+  assigner User   @relation("PolicyAssignmentAssigner", fields: [assignedBy], references: [id], onDelete: Cascade)
+
+  @@index([policyId, assignmentType])
+  @@index([assignedBy, assignedAt])
+  @@map("policy_assignments")
+}
+
+model Risk {
+  id                 String           @id @default(cuid())
+  organizationId     String
+  title              String
+  description        String?
+  category           RiskCategory
+  subcategory        RiskSubcategory?
+  likelihoodInherent LikelihoodLevel
+  impactInherent     ImpactLevel
+  likelihoodResidual LikelihoodLevel?
+  impactResidual     ImpactLevel?
+  severityInherent   SeverityLevel
+  severityResidual   SeverityLevel?
+  ownerId            String
+  status             RiskStatus       @default(IDENTIFIED)
+  businessUnit       String?
+  metadata           Json? // Additional risk metadata
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  owner        User         @relation("RiskOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+
+  assessments     RiskAssessment[]
+  treatments      RiskTreatment[]
+  controlMappings RiskControlMapping[]
+  policyMappings  RiskPolicyMapping[]
+
+  @@index([organizationId, status])
+  @@index([organizationId, category])
+  @@index([organizationId, severityInherent])
+  @@index([ownerId, status])
+  @@map("risks")
+}
+
+model RiskAssessment {
+  id                  String                @id @default(cuid())
+  riskId              String
+  assessedBy          String
+  methodology         AssessmentMethodology
+  assessmentDate      DateTime              @default(now())
+  likelihoodScore     Float
+  impactScore         Float
+  severityCalculation SeverityLevel
+  confidenceLevel     Float? // 0-100
+  notes               String?
+  nextAssessmentDue   DateTime?
+  approvedBy          String?
+  approvedAt          DateTime?
+  metadata            Json? // Additional assessment metadata
+
+  risk     Risk  @relation(fields: [riskId], references: [id], onDelete: Cascade)
+  assessor User  @relation("RiskAssessmentAssessor", fields: [assessedBy], references: [id], onDelete: Cascade)
+  approver User? @relation("RiskAssessmentApprover", fields: [approvedBy], references: [id], onDelete: SetNull)
+
+  @@index([riskId, assessmentDate])
+  @@index([assessedBy, assessmentDate])
+  @@map("risk_assessments")
+}
+
+model RiskTreatment {
+  id                   String            @id @default(cuid())
+  riskId               String
+  treatmentStrategy    TreatmentStrategy
+  treatmentDescription String
+  ownerId              String
+  startDate            DateTime?
+  targetCompletionDate DateTime?
+  actualCompletionDate DateTime?
+  budgetAllocated      Float?
+  actualCost           Float?
+  status               TreatmentStatus   @default(PLANNED)
+  effectivenessRating  Float? // 0-100
+  metadata             Json? // Additional treatment metadata
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
+
+  risk  Risk @relation(fields: [riskId], references: [id], onDelete: Cascade)
+  owner User @relation("RiskTreatmentOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@index([riskId, status])
+  @@index([ownerId, status])
+  @@index([riskId, targetCompletionDate])
+  @@map("risk_treatments")
+}
+
+model RiskControlMapping {
+  id                  String      @id @default(cuid())
+  riskId              String
+  controlId           String
+  mappingType         MappingType
+  effectivenessRating Float? // 0-100
+  coveragePercentage  Float? // 0-100
+  createdBy           String
+  validatedAt         DateTime?
+  metadata            Json? // Additional mapping metadata
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+
+  risk    Risk    @relation(fields: [riskId], references: [id], onDelete: Cascade)
+  control Control @relation(fields: [controlId], references: [id], onDelete: Cascade)
+  creator User    @relation("RiskControlMappingCreator", fields: [createdBy], references: [id], onDelete: Cascade)
+
+  @@index([riskId, controlId])
+  @@index([controlId, mappingType])
+  @@index([createdBy, createdAt])
+  @@map("risk_control_mappings")
+}
+
+model RiskPolicyMapping {
+  id                  String    @id @default(cuid())
+  riskId              String
+  policyId            String
+  mappingType         String // ADDRESSES, MITIGATES, PREVENTS, MONITORS
+  effectivenessRating Float? // 0-100
+  coveragePercentage  Float? // 0-100
+  createdBy           String
+  validatedAt         DateTime?
+  metadata            Json? // Additional mapping metadata
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  risk    Risk   @relation(fields: [riskId], references: [id], onDelete: Cascade)
+  policy  Policy @relation(fields: [policyId], references: [id], onDelete: Cascade)
+  creator User   @relation("RiskPolicyMappingCreator", fields: [createdBy], references: [id], onDelete: Cascade)
+
+  @@index([riskId, policyId])
+  @@index([policyId, mappingType])
+  @@index([createdBy, createdAt])
+  @@map("risk_policy_mappings")
+}
+
+model GovernanceDashboard {
+  id             String   @id @default(cuid())
+  organizationId String
+  dashboardType  String // EXECUTIVE, OPERATIONAL, RISK, POLICY
+  title          String
+  description    String?
+  configuration  Json? // Dashboard configuration and layout
+  isDefault      Boolean  @default(false)
+  createdBy      String
+  metadata       Json? // Additional dashboard metadata
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  creator      User         @relation("GovernanceDashboardCreator", fields: [createdBy], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, dashboardType])
+  @@index([createdBy, createdAt])
+  @@map("governance_dashboards")
+}
+
+model GovernanceMetric {
+  id                String   @id @default(cuid())
+  organizationId    String
+  metricType        String // POLICY_COMPLIANCE, RISK_EXPOSURE, CONTROL_EFFECTIVENESS
+  metricName        String
+  metricValue       Float
+  targetValue       Float?
+  unit              String? // PERCENTAGE, COUNT, CURRENCY, DAYS
+  calculationMethod String? // How the metric is calculated
+  dataSource        String? // Source of the metric data
+  lastUpdated       DateTime @default(now())
+  metadata          Json? // Additional metric metadata
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, metricType])
+  @@index([organizationId, lastUpdated])
+  @@map("governance_metrics")
+}
+
+model GovernanceAlert {
+  id             String    @id @default(cuid())
+  organizationId String
+  alertType      String // POLICY_OVERDUE, RISK_THRESHOLD, COMPLIANCE_GAP
+  title          String
+  description    String?
+  severity       String // LOW, MEDIUM, HIGH, CRITICAL
+  status         String // ACTIVE, ACKNOWLEDGED, RESOLVED, DISMISSED
+  triggeredAt    DateTime  @default(now())
+  acknowledgedAt DateTime?
+  resolvedAt     DateTime?
+  acknowledgedBy String?
+  resolvedBy     String?
+  metadata       Json? // Additional alert metadata
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  acknowledger User?        @relation("GovernanceAlertAcknowledgement", fields: [acknowledgedBy], references: [id], onDelete: SetNull)
+  resolver     User?        @relation("GovernanceAlertResolution", fields: [resolvedBy], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, status])
+  @@index([organizationId, severity])
+  @@index([organizationId, triggeredAt])
+  @@map("governance_alerts")
+}
+
+// ===== ENTERPRISE IDENTITY & ACCESS MANAGEMENT MODULE =====
+
+enum IdentityProviderType {
+  SAML
+  OAUTH2
+  OPENID_CONNECT
+  LDAP
+  AZURE_AD
+  OKTA
+  GOOGLE_WORKSPACE
+  PING_IDENTITY
+  ADFS
+  CUSTOM
+}
+
+enum IdentityProviderStatus {
+  ACTIVE
+  INACTIVE
+  PENDING
+  ERROR
+  MAINTENANCE
+}
+
+enum SAMLSessionStatus {
+  ACTIVE
+  EXPIRED
+  TERMINATED
+  SUSPENDED
+}
+
+enum SCIMSyncStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  FAILED
+  PARTIAL
+}
+
+enum ProvisioningAction {
+  CREATE
+  UPDATE
+  DELETE
+  SUSPEND
+  REACTIVATE
+  PASSWORD_RESET
+  GROUP_ASSIGNMENT
+  GROUP_REMOVAL
+}
+
+enum DataRegionStatus {
+  ACTIVE
+  INACTIVE
+  MAINTENANCE
+  DEPRECATED
+}
+
+enum DataTransferStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum EncryptionKeyType {
+  AES_256
+  RSA_2048
+  RSA_4096
+  ECDSA_P256
+  ECDSA_P384
+  ECDSA_P521
+  CHACHA20_POLY1305
+}
+
+enum SecurityPolicyType {
+  ACCESS_CONTROL
+  DATA_ENCRYPTION
+  AUDIT_LOGGING
+  THREAT_DETECTION
+  COMPLIANCE_MONITORING
+  INCIDENT_RESPONSE
+}
+
+enum SecurityEventType {
+  LOGIN_SUCCESS
+  LOGIN_FAILURE
+  LOGOUT
+  PASSWORD_CHANGE
+  PERMISSION_CHANGE
+  DATA_ACCESS
+  DATA_MODIFICATION
+  SUSPICIOUS_ACTIVITY
+  SECURITY_VIOLATION
+  SYSTEM_ERROR
+}
+
+model IdentityProvider {
+  id             String                 @id @default(cuid())
+  organizationId String
+  providerType   IdentityProviderType
+  providerName   String
+  configuration  Json // Provider-specific configuration
+  metadataXml    String? // SAML metadata XML
+  status         IdentityProviderStatus @default(PENDING)
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+
+  organization      Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  samlSessions      SAMLSession[]
+  scimEndpoints     SCIMEndpoint[]
+  provisioningAudit ProvisioningAudit[]
+
+  @@index([organizationId, status])
+  @@index([providerType, status])
+  @@map("identity_providers")
+}
+
+model SAMLSession {
+  id                 String            @id @default(cuid())
+  organizationId     String
+  userId             String
+  identityProviderId String
+  sessionId          String            @unique
+  assertionId        String?           @unique
+  issuedAt           DateTime          @default(now())
+  expiresAt          DateTime
+  attributes         Json? // SAML assertion attributes
+  ipAddress          String?
+  userAgent          String?
+  status             SAMLSessionStatus @default(ACTIVE)
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+
+  organization     Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  identityProvider IdentityProvider @relation(fields: [identityProviderId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, userId])
+  @@index([identityProviderId, status])
+  @@index([expiresAt, status])
+  @@map("saml_sessions")
+}
+
+model SCIMEndpoint {
+  id                 String         @id @default(cuid())
+  organizationId     String
+  identityProviderId String
+  endpointUrl        String
+  bearerToken        String // Encrypted bearer token
+  syncFrequency      Int            @default(300) // seconds
+  lastSyncAt         DateTime?
+  syncStatus         SCIMSyncStatus @default(PENDING)
+  errorLog           String?
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+
+  organization      Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  identityProvider  IdentityProvider    @relation(fields: [identityProviderId], references: [id], onDelete: Cascade)
+  provisioningAudit ProvisioningAudit[]
+
+  @@index([organizationId, syncStatus])
+  @@index([identityProviderId, lastSyncAt])
+  @@map("scim_endpoints")
+}
+
+model ProvisioningAudit {
+  id                 String             @id @default(cuid())
+  organizationId     String
+  identityProviderId String
+  scimEndpointId     String?
+  action             ProvisioningAction
+  userId             String?
+  scimUserId         String?
+  performedBy        String? // System or user who performed the action
+  timestamp          DateTime           @default(now())
+  details            Json? // Action-specific details
+  result             String // SUCCESS, FAILURE, PARTIAL
+  errorMessage       String?
+
+  organization     Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  identityProvider IdentityProvider @relation(fields: [identityProviderId], references: [id], onDelete: Cascade)
+  scimEndpoint     SCIMEndpoint?    @relation(fields: [scimEndpointId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, action])
+  @@index([identityProviderId, timestamp])
+  @@index([userId, timestamp])
+  @@map("provisioning_audit")
+}
+
+// ===== DATA RESIDENCY & SOVEREIGNTY MODULE =====
+
+model DataRegion {
+  id                     String   @id @default(cuid())
+  regionCode             String   @unique
+  regionName             String
+  jurisdiction           String
+  dataCenterLocations    String[] // Array of data center locations
+  regulatoryRequirements Json? // Jurisdiction-specific requirements
+  activeFlag             Boolean  @default(true)
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  orgDataResidency      OrgDataResidency[]  @relation("PrimaryRegion")
+  dataTransferAudit     DataTransferAudit[] @relation("SourceRegion")
+  dataTransferAuditDest DataTransferAudit[] @relation("DestinationRegion")
+
+  @@index([regionCode, activeFlag])
+  @@map("data_regions")
+}
+
+model OrgDataResidency {
+  id                       String    @id @default(cuid())
+  organizationId           String    @unique
+  primaryRegion            String
+  backupRegions            String[] // Array of backup region codes
+  residencyRequirements    Json? // Organization-specific requirements
+  complianceCertifications Json? // Compliance certifications
+  lastValidatedAt          DateTime?
+  createdAt                DateTime  @default(now())
+  updatedAt                DateTime  @updatedAt
+
+  organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  primaryRegionData DataRegion   @relation("PrimaryRegion", fields: [primaryRegion], references: [regionCode])
+
+  @@index([organizationId])
+  @@map("org_data_residency")
+}
+
+model DataTransferAudit {
+  id                String             @id @default(cuid())
+  organizationId    String
+  sourceRegion      String
+  destinationRegion String
+  dataType          String // Type of data transferred
+  transferReason    String
+  legalBasis        String // Legal basis for transfer
+  authorizedBy      String // User who authorized the transfer
+  transferredAt     DateTime           @default(now())
+  status            DataTransferStatus @default(COMPLETED)
+
+  organization          Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  sourceRegionData      DataRegion   @relation("SourceRegion", fields: [sourceRegion], references: [regionCode])
+  destinationRegionData DataRegion   @relation("DestinationRegion", fields: [destinationRegion], references: [regionCode])
+
+  @@index([organizationId, transferredAt])
+  @@index([sourceRegion, destinationRegion])
+  @@map("data_transfer_audit")
+}
+
+// ===== ADVANCED SECURITY FRAMEWORK MODULE =====
+
+model EncryptionConfig {
+  id                     String   @id @default(cuid())
+  organizationId         String   @unique
+  keyManagementType      String // HSM, CLOUD_KMS, BYOK
+  kmsProvider            String? // AWS KMS, Azure Key Vault, etc.
+  byokEnabled            Boolean  @default(false)
+  clientSideEncryption   Boolean  @default(false)
+  keyRotationPolicy      Json? // Rotation schedule and policies
+  complianceRequirements Json? // Compliance requirements
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@map("encryption_config")
+}
+
+model SecurityPolicy {
+  id               String             @id @default(cuid())
+  organizationId   String
+  policyType       SecurityPolicyType
+  policyConfig     Json // Policy configuration
+  enforcementLevel String // STRICT, MODERATE, PERMISSIVE
+  exceptions       Json? // Policy exceptions
+  createdBy        String
+  effectiveDate    DateTime           @default(now())
+  nextReviewDate   DateTime?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  creator      User         @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, policyType])
+  @@index([effectiveDate, nextReviewDate])
+  @@map("security_policies")
+}
+
+model SecurityAuditLog {
+  id             String            @id @default(cuid())
+  organizationId String
+  eventType      SecurityEventType
+  userId         String?
+  resourceId     String? // ID of the resource accessed
+  action         String
+  timestamp      DateTime          @default(now())
+  ipAddress      String?
+  userAgent      String?
+  riskScore      Float? // Risk score 0-1
+  alertTriggered Boolean           @default(false)
+  metadata       Json? // Additional event metadata
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, eventType])
+  @@index([userId, timestamp])
+  @@index([timestamp, riskScore])
+  @@map("security_audit_log")
+}
+
+// ===== AI ASSISTANCE LAYER MODULE =====
+
+enum AIQueryStatus {
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum AIFeedbackType {
+  HELPFUL
+  NOT_HELPFUL
+  ACCURATE
+  INACCURATE
+  RELEVANT
+  IRRELEVANT
+  SUGGESTION
+  BUG_REPORT
+}
+
+enum AIModelProvider {
+  OPENAI
+  ANTHROPIC
+  GOOGLE
+  AZURE
+  AWS
+  LOCAL
+  CUSTOM
+}
+
+enum AICapability {
+  TEXT_GENERATION
+  TEXT_ANALYSIS
+  EMBEDDING_GENERATION
+  DOCUMENT_PARSING
+  IMAGE_ANALYSIS
+  CODE_GENERATION
+  TRANSLATION
+  SUMMARIZATION
+  QUESTION_ANSWERING
+  CLASSIFICATION
+}
+
+model AIQuery {
+  id              String        @id @default(cuid())
+  organizationId  String
+  userId          String
+  sessionId       String?
+  queryText       String
+  responseText    String?
+  responseTime    Int? // in milliseconds
+  contextSources  Json? // Array of source references
+  modelUsed       String?
+  tokenCount      Int?
+  status          AIQueryStatus @default(PROCESSING)
+  confidenceScore Float? // 0-1 confidence in response
+  metadata        Json? // Additional query metadata
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation("AIQueryUser", fields: [userId], references: [id], onDelete: Cascade)
+  session      AISession?   @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  feedback     AIFeedback[]
+
+  @@index([organizationId, status])
+  @@index([userId, createdAt])
+  @@index([sessionId, createdAt])
+  @@map("ai_queries")
+}
+
+model AIEmbedding {
+  id             String   @id @default(cuid())
+  organizationId String
+  sourceType     String // EVIDENCE, POLICY, CONTROL, RISK, etc.
+  sourceId       String // ID of the source document/record
+  vector         Json // Vector embedding data
+  embeddingModel String // Model used for embedding
+  chunkText      String // Text chunk that was embedded
+  metadata       Json? // Additional embedding metadata
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, sourceType])
+  @@index([sourceType, sourceId])
+  @@index([embeddingModel, createdAt])
+  @@map("ai_embeddings")
+}
+
+model AIFeedback {
+  id                    String         @id @default(cuid())
+  aiQueryId             String
+  userId                String
+  rating                Int? // 1-5 rating
+  comment               String?
+  improvementSuggestion String?
+  feedbackType          AIFeedbackType
+  metadata              Json? // Additional feedback metadata
+  createdAt             DateTime       @default(now())
+
+  aiQuery AIQuery @relation(fields: [aiQueryId], references: [id], onDelete: Cascade)
+  user    User    @relation("AIFeedbackUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([aiQueryId, feedbackType])
+  @@index([userId, createdAt])
+  @@map("ai_feedback")
+}
+
+model AIModel {
+  id                 String          @id @default(cuid())
+  modelName          String
+  modelVersion       String
+  provider           AIModelProvider
+  capabilities       AICapability[]
+  costPerToken       Float?
+  performanceMetrics Json? // Accuracy, speed, etc.
+  activeFlag         Boolean         @default(true)
+  metadata           Json? // Additional model metadata
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+
+  @@index([provider, activeFlag])
+  @@index([modelName, modelVersion])
+  @@map("ai_models")
+}
+
+model AISession {
+  id             String   @id @default(cuid())
+  organizationId String
+  userId         String
+  sessionTitle   String?
+  startedAt      DateTime @default(now())
+  lastActivity   DateTime @default(now())
+  queryCount     Int      @default(0)
+  contextWindow  Json? // Session context and memory
+  metadata       Json? // Additional session metadata
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation("AISessionUser", fields: [userId], references: [id], onDelete: Cascade)
+  queries      AIQuery[]
+
+  @@index([organizationId, userId])
+  @@index([userId, lastActivity])
+  @@map("ai_sessions")
+}
